@@ -24,3 +24,6 @@ Homestead.yaml
 Thumbs.db
 database/*.sqlite
 database/database.sqlite
+
+push.bat
+push.ps1
