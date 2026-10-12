@@ -1,0 +1,121 @@
+================================================================================
+KARGO VE SIPARIS TAKIP SISTEMI - PROJE DEGERLENDIRME RAPORU
+Değerlendirme Tarihi: 12.10.2026
+Referans Belge: RUBRIK.md (100 Puan Üzerinden)
+================================================================================
+
+1. MADDE: En Az İki Varlık İçin Tam CRUD
+Puan: 25/25
+Gerekçe: Projede sadece iki varlık değil; Customer, Status, Order ve Shipment olmak üzere 4 varlığın tamamında 7 standart CRUD metodu (index, create, store, show, edit, update, destroy) eksiksiz uygulanmış ve test edilmiştir. Sayfalama (paginate(10)) tüm listelerde aktiftir.
+Kanıt:
+  - Rotalar: php artisan route:list çıktısında 4 kaynak için resource rotaları mevcuttur (customers.*, statuses.*, orders.*, shipments.*).
+  - Controller'lar: app/Http/Controllers/CustomerController.php, StatusController.php, OrderController.php, ShipmentController.php
+  - Test Komutu: php artisan test --filter=CrudResourceTest çıktısı (4 test, 71 assertion PASS).
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+2. MADDE: Konsepte Uygunluk
+Puan: 10/10
+Gerekçe: Customer (ad, e-posta, telefon, adres, şehir), Status (Beklemede, Hazırlanıyor, Kargoda, Teslim Edildi, İptal), Order (müşteri, durum, sipariş no, tutar, not) ve Shipment (sipariş, firma, takip no, gönderim ve teslim tarihi, durum açıklaması) kargo ve sipariş takip iş alanına (domain) eksiksiz hizmet etmektedir.
+Kanıt:
+  - Migration Dosyaları:
+    * database/migrations/2026_10_12_075028_create_customers_table.php
+    * database/migrations/2026_10_12_075029_create_statuses_table.php
+    * database/migrations/2026_10_12_075030_create_orders_table.php
+    * database/migrations/2026_10_12_075031_create_shipments_table.php
+  - Model Dosyaları: app/Models/Customer.php, Status.php, Order.php, Shipment.php
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+3. MADDE: İş Kuralı Uygulaması ("Teslim edilmiş sipariş iptal edilemez.")
+Puan: 15/15
+Gerekçe: Kritik iş kuralı şart koşulan 3 katmanda da (Model, Controller, Arayüz) eksiksiz ve güvenli bir şekilde uygulanmıştır.
+Kanıt:
+  - Katman 1 (Model): app/Models/Order.php içinde isDelivered() metodu tanımlıdır. booted() static updating olayında status_id 'delivered' iken 'cancelled' yapılmak istendiğinde \DomainException('Teslim edilmiş sipariş iptal edilemez.') fırlatılır.
+  - Katman 2 (Controller): app/Http/Controllers/OrderController.php içinde cancel() metodu ve orders/{order}/cancel (orders.cancel) POST rotası mevcuttur. Teslim edilmiş sipariş için back()->with('error', 'Teslim edilmiş sipariş iptal edilemez.') döner; aksi halde iptal edip success mesajı verir. update() metodunda DomainException try-catch ile yakalanıp withErrors(['status_id' => ...]) ile kullanıcıya sunulur.
+  - Katman 3 (Arayüz): resources/views/orders/index.blade.php ve show.blade.php dosyalarında teslim edilmiş siparişlerde "İptal Et" butonu gizlenir. resources/views/orders/_form.blade.php içinde teslim edilmiş sipariş düzenlenirken durum select'inde "İptal" seçeneği disabled olur. resources/views/layouts/app.blade.php şablonunda session('error') ve session('success') uyarı kutuları yer alır.
+  - Test Komutu: php artisan test --filter=OrderCancelTest çıktısı (3 test, 17 assertion PASS).
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+4. MADDE: Doğrulama (FormRequest Sınıfları)
+Puan: 10/10
+Gerekçe: Giriş verileri controller'da bırakılmamış, 4 ayrı FormRequest sınıfı ile doğrulanmıştır. required, email, unique (mevcut kaydı hariç tutarak), exists kuralları ve anlamlı Türkçe hata mesajları messages() ile tanımlanmıştır.
+Kanıt:
+  - app/Http/Requests/CustomerRequest.php (required, email, unique:customers,email ignore ID)
+  - app/Http/Requests/StatusRequest.php (required, unique:statuses,name ignore ID)
+  - app/Http/Requests/OrderRequest.php (required, exists:customers,id, exists:statuses,id, unique:orders,order_number ignore ID)
+  - app/Http/Requests/ShipmentRequest.php (required, exists:orders,id, unique:shipments,tracking_number ignore ID)
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+5. MADDE: İlişkiler ve Veritabanı Mimarisi
+Puan: 10/10
+Gerekçe: Tablolar yabancı anahtar (foreignId()->constrained()->cascadeOnDelete()) kısıtlamalarıyla birbirine bağlanmıştır. Eloquent ilişkileri çift yönlü kurulmuştur. StatusSeeder slug değerlerini (pending, preparing, shipped, delivered, cancelled) seed etmektedir. N+1 sorgu problemi Order::with(['customer','status','shipment']) ile çözülmüştür.
+Kanıt:
+  - app/Http/Controllers/OrderController.php: Order::with(['customer', 'status', 'shipment'])->latest()->paginate(10)
+  - app/Http/Controllers/ShipmentController.php: Shipment::with(['order.customer', 'order.status'])->latest()->paginate(10)
+  - database/seeders/StatusSeeder.php ve DatabaseSeeder.php
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+6. MADDE: Otomatik Testler
+Puan: 10/10
+Gerekçe: İş kuralının üç temel senaryosu ve 4 varlığın tam CRUD akışları Feature testleri ile yazılmış; test ortamında RefreshDatabase ve StatusSeeder kullanılmıştır.
+Kanıt:
+  - tests/Feature/OrderCancelTest.php:
+    * test_teslim_edilmis_siparis_iptal_edilemez
+    * test_beklemedeki_siparis_iptal_edilebilir
+    * test_teslim_edilmis_siparisin_durumu_update_ile_cancelled_yapilamaz
+  - tests/Feature/CrudResourceTest.php (Müşteri, Durum, Sipariş, Kargo CRUD)
+  - Test Komutu: php artisan test çıktısı:
+    PASS Tests\Unit\ExampleTest
+    PASS Tests\Feature\CrudResourceTest
+    PASS Tests\Feature\ExampleTest
+    PASS Tests\Feature\OrderCancelTest
+    Tests: 9 passed (90 assertions), Duration: 0.73s
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+7. MADDE: Kod Kalitesi ve Düzen
+Puan: 10/10
+Gerekçe: Skinny controller prensibine uyulmuş; iş mantığı model ve FormRequest katmanlarına dağıtılmıştır. resources/views/layouts/app.blade.php ana şablonunda Bootstrap 5.3 CDN, Bootstrap Icons, responsive menü ve flash kutuları yer almaktadır. DRY prensibine uygun olarak tüm kaynaklarda ortak _form.blade.php parçaları kullanılmıştır.
+Kanıt:
+  - resources/views/customers/_form.blade.php
+  - resources/views/statuses/_form.blade.php
+  - resources/views/orders/_form.blade.php (müşteri & durum select)
+  - resources/views/shipments/_form.blade.php (sipariş select & kargo kodu üreteci)
+  - resources/views/layouts/app.blade.php
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+8. MADDE: README Dokümantasyonu
+Puan: 5/5
+Gerekçe: Proje kökündeki README.md dosyası varsayılan taslaktan arındırılmış; kurulum adımları, veritabanı migrate/seed komutları, test çalıştırma rehberi, rota yapısı ve değerlendirme rubriği bağlantısı açıkça belgelenmiştir.
+Kanıt:
+  - README.md dosyası (Kurulum, Test, Rotalar, Rubrik bölümleri eksiksiz).
+Eksik: Yok.
+
+--------------------------------------------------------------------------------
+
+9. MADDE: Git ve Güvenlik Kullanımı
+Puan: 3/5
+Gerekçe: .gitignore dosyası doğru yapılandırılmış olup .env, vendor/, log dosyaları ve veritabanı dosyaları hariç tutulmuştur. .env.example şablonu mevcuttur ve hassas veri sızıntısı yoktur. Ancak geliştirme ortamında Git komut satırı aracı (git CLI) kurulu olmadığından proje klasöründe git deposu ve commit geçmişi (git history) henüz oluşturulmamıştır.
+Kanıt:
+  - .gitignore dosyası (.env ve vendor kuralları tanımlı)
+  - .env.example şablon dosyası mevcut
+Eksik: Git başlatılmamış (.git klasörü ve commit geçmişi mevcut değil). Sistemde Git CLI bulunmadığı için puan kısmi verilmiştir (3/5).
+
+================================================================================
+TOPLAM: 98/100
+================================================================================
+Sonuç Değerlendirmesi:
+Proje, kargo ve sipariş takibi konusuna tam uyumlu olup 4 varlığın tümünde eksiksiz CRUD, FormRequest doğrulamaları, N+1 sorgu engellemesi, 3 katmanlı iş kuralı ("teslim edilmiş sipariş iptal edilemez") ve 90 assertion'lık %100 başarılı test kapsamı ile yüksek mühendislik kalitesine sahiptir. Tek puan kırımı, yerel ortamda Git CLI eksikliğinden kaynaklanan commit geçmişi yokluğudur (Kriter 9: 3/5).
+================================================================================
