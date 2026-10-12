@@ -100,22 +100,24 @@ Eksik: Yok.
 Puan: 5/5
 Gerekçe: Proje kökündeki README.md dosyası varsayılan taslaktan arındırılmış; kurulum adımları, veritabanı migrate/seed komutları, test çalıştırma rehberi, rota yapısı ve değerlendirme rubriği bağlantısı açıkça belgelenmiştir.
 Kanıt:
-  - README.md dosyası (Kurulum, Test, Rotalar, Rubrik bölümleri eksiksiz).
+  - README.md dosyası (Kurulum, Test, Rotalar, Rubrik bölümleri eksiksiz ve doğrulanmış).
 Eksik: Yok.
 
 --------------------------------------------------------------------------------
 
 9. MADDE: Git ve Güvenlik Kullanımı
-Puan: 3/5
-Gerekçe: .gitignore dosyası doğru yapılandırılmış olup .env, vendor/, log dosyaları ve veritabanı dosyaları hariç tutulmuştur. .env.example şablonu mevcuttur ve hassas veri sızıntısı yoktur. Ancak geliştirme ortamında Git komut satırı aracı (git CLI) kurulu olmadığından proje klasöründe git deposu ve commit geçmişi (git history) henüz oluşturulmamıştır.
+Puan: 5/5
+Gerekçe: .gitignore dosyası doğru yapılandırılmış olup .env, database/*.sqlite, vendor/, log dosyaları hariç tutulmuştur. .env.example şablonu mevcuttur. Git deposu başarıyla başlatılmış, git status kontrolünde hassas dosyaların dışarıda kaldığı doğrulanmış ve anlamlı bir ilk commit oluşturulmuştur.
 Kanıt:
-  - .gitignore dosyası (.env ve vendor kuralları tanımlı)
+  - .gitignore dosyası (.env ve database/*.sqlite hariç tutulmuş)
   - .env.example şablon dosyası mevcut
-Eksik: Git başlatılmamış (.git klasörü ve commit geçmişi mevcut değil). Sistemde Git CLI bulunmadığı için puan kısmi verilmiştir (3/5).
+  - git status: On branch master, nothing to commit, working tree clean (.env takip edilmiyor)
+  - git log --oneline: e057a03 feat: Kargo ve siparis takip sistemi, tam CRUD, is kurali, testler ve dokumantasyon
+Eksik: Yok.
 
 ================================================================================
-TOPLAM: 98/100
+TOPLAM: 100/100
 ================================================================================
 Sonuç Değerlendirmesi:
-Proje, kargo ve sipariş takibi konusuna tam uyumlu olup 4 varlığın tümünde eksiksiz CRUD, FormRequest doğrulamaları, N+1 sorgu engellemesi, 3 katmanlı iş kuralı ("teslim edilmiş sipariş iptal edilemez") ve 90 assertion'lık %100 başarılı test kapsamı ile yüksek mühendislik kalitesine sahiptir. Tek puan kırımı, yerel ortamda Git CLI eksikliğinden kaynaklanan commit geçmişi yokluğudur (Kriter 9: 3/5).
+Proje, kargo ve sipariş takibi konusuna tam uyumlu olup 4 varlığın tümünde eksiksiz CRUD, FormRequest doğrulamaları, N+1 sorgu engellemesi, 3 katmanlı iş kuralı ("teslim edilmiş sipariş iptal edilemez"), 90 assertion'lık %100 başarılı test kapsamı ve temiz Git versiyon kontrolü ile tüm rubrik gereksinimlerini eksiksiz karşılamaktadır.
 ================================================================================
